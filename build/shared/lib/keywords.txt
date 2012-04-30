@@ -3,12 +3,12 @@
 HIGH	LITERAL1	Constants
 LOW	LITERAL1	Constants
 INPUT	LITERAL1	Constants
+INPUT_PULLUP	LITERAL1	Constants
 OUTPUT	LITERAL1	Constants
 DEC	LITERAL1	Serial_Print
 BIN	LITERAL1	Serial_Print
 HEX	LITERAL1	Serial_Print
 OCT	LITERAL1	Serial_Print
-BYTE	LITERAL1	Serial_Print
 PI	LITERAL1
 HALF_PI	LITERAL1
 TWO_PI	LITERAL1
@@ -31,6 +31,7 @@ byte	KEYWORD1	Byte
 case	KEYWORD1	SwitchCase
 char	KEYWORD1	Char
 class	KEYWORD1
+const	KEYWORD1	Const
 continue	KEYWORD1	Continue
 default	KEYWORD1	SwitchCase	
 do	KEYWORD1	DoWhile
@@ -173,6 +174,13 @@ print	KEYWORD2	Serial_Print
 println	KEYWORD2	Serial_Println
 available	KEYWORD2	Serial_Available
 flush	KEYWORD2	Serial_Flush
+setTimeout	KEYWORD2
+find	KEYWORD2
+findUntil	KEYWORD2
+parseInt	KEYWORD2
+parseFloat	KEYWORD2
+readBytes	KEYWORD2
+readBytesUntil	KEYWORD2
 
 setup	KEYWORD3	Setup
 loop	KEYWORD3	Loop

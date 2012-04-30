@@ -42,33 +42,28 @@ public class AvrdudeUploader extends Uploader  {
   public AvrdudeUploader() {
   }
 
-  // XXX: add support for uploading sketches using a programmer
-  public boolean uploadUsingPreferences(String buildPath, String className, boolean verbose)
+  public boolean uploadUsingPreferences(String buildPath, String className, boolean usingProgrammer)
   throws RunnerException, SerialException {
     this.verbose = verbose;
     Map<String, String> boardPreferences = Base.getBoardPreferences();
-    String uploadUsing = boardPreferences.get("upload.using");
-    if (uploadUsing == null) {
-      // fall back on global preference
-      uploadUsing = Preferences.get("upload.using");
-    }
-    if (uploadUsing.equals("bootloader")) {
-      return uploadViaBootloader(buildPath, className);
-    } else {
-      Target t;
 
-      if (uploadUsing.indexOf(':') == -1) {
-        t = Base.getTarget(); // the current target (associated with the board)
-      } else {
-        String targetName = uploadUsing.substring(0, uploadUsing.indexOf(':'));
-        t = Base.targetsTable.get(targetName);
-        uploadUsing = uploadUsing.substring(uploadUsing.indexOf(':') + 1);
+    // if no protocol is specified for this board, assume it lacks a 
+    // bootloader and upload using the selected programmer.
+    if (usingProgrammer || boardPreferences.get("upload.protocol") == null) {
+      String programmer = Preferences.get("programmer");
+      Target target = Base.getTarget();
+
+      if (programmer.indexOf(":") != -1) {
+        target = Base.targetsTable.get(programmer.substring(0, programmer.indexOf(":")));
+        programmer = programmer.substring(programmer.indexOf(":") + 1);
       }
-
-      Collection params = getProgrammerCommands(t, uploadUsing);
+      
+      Collection params = getProgrammerCommands(target, programmer);
       params.add("-Uflash:w:" + buildPath + File.separator + className + ".hex:i");
       return avrdude(params);
     }
+
+    return uploadViaBootloader(buildPath, className);
   }
   
   private boolean uploadViaBootloader(String buildPath, String className)
@@ -86,6 +81,7 @@ public class AvrdudeUploader extends Uploader  {
     commandDownloader.add(
       "-b" + Integer.parseInt(boardPreferences.get("upload.speed")));
     commandDownloader.add("-D"); // don't erase
+    if (!Preferences.getBoolean("upload.verify")) commandDownloader.add("-V"); // disable verify
     commandDownloader.add("-Uflash:w:" + buildPath + File.separator + className + ".hex:i");
 
     if (boardPreferences.get("upload.disable_flushing") == null ||
@@ -96,8 +92,14 @@ public class AvrdudeUploader extends Uploader  {
     return avrdude(commandDownloader);
   }
   
-  public boolean burnBootloader(String targetName, String programmer) throws RunnerException {
-    return burnBootloader(getProgrammerCommands(Base.targetsTable.get(targetName), programmer));
+  public boolean burnBootloader() throws RunnerException {
+    String programmer = Preferences.get("programmer");
+    Target target = Base.getTarget();
+    if (programmer.indexOf(":") != -1) {
+      target = Base.targetsTable.get(programmer.substring(0, programmer.indexOf(":")));
+      programmer = programmer.substring(programmer.indexOf(":") + 1);
+    }
+    return burnBootloader(getProgrammerCommands(target, programmer));
   }
   
   private Collection getProgrammerCommands(Target target, String programmer) {
@@ -131,7 +133,8 @@ public class AvrdudeUploader extends Uploader  {
     Map<String, String> boardPreferences = Base.getBoardPreferences();
     List fuses = new ArrayList();
     fuses.add("-e"); // erase the chip
-    fuses.add("-Ulock:w:" + boardPreferences.get("bootloader.unlock_bits") + ":m");
+    if (boardPreferences.get("bootloader.unlock_bits") != null)
+      fuses.add("-Ulock:w:" + boardPreferences.get("bootloader.unlock_bits") + ":m");
     if (boardPreferences.get("bootloader.extended_fuses") != null)
       fuses.add("-Uefuse:w:" + boardPreferences.get("bootloader.extended_fuses") + ":m");
     fuses.add("-Uhfuse:w:" + boardPreferences.get("bootloader.high_fuses") + ":m");
@@ -145,26 +148,32 @@ public class AvrdudeUploader extends Uploader  {
     } catch (InterruptedException e) {}
     
     Target t;
+    List bootloader = new ArrayList();
     String bootloaderPath = boardPreferences.get("bootloader.path");
     
-    if (bootloaderPath.indexOf(':') == -1) {
-      t = Base.getTarget(); // the current target (associated with the board)
-    } else {
-      String targetName = bootloaderPath.substring(0, bootloaderPath.indexOf(':'));
-      t = Base.targetsTable.get(targetName);
-      bootloaderPath = bootloaderPath.substring(bootloaderPath.indexOf(':') + 1);
+    if (bootloaderPath != null) {
+      if (bootloaderPath.indexOf(':') == -1) {
+        t = Base.getTarget(); // the current target (associated with the board)
+      } else {
+        String targetName = bootloaderPath.substring(0, bootloaderPath.indexOf(':'));
+        t = Base.targetsTable.get(targetName);
+        bootloaderPath = bootloaderPath.substring(bootloaderPath.indexOf(':') + 1);
+      }
+      
+      File bootloadersFile = new File(t.getFolder(), "bootloaders");
+      File bootloaderFile = new File(bootloadersFile, bootloaderPath);
+      bootloaderPath = bootloaderFile.getAbsolutePath();
+      
+      bootloader.add("-Uflash:w:" + bootloaderPath + File.separator +
+                     boardPreferences.get("bootloader.file") + ":i");
     }
-    
-    File bootloadersFile = new File(t.getFolder(), "bootloaders");
-    File bootloaderFile = new File(bootloadersFile, bootloaderPath);
-    bootloaderPath = bootloaderFile.getAbsolutePath();
-    
-    List bootloader = new ArrayList();
-    bootloader.add("-Uflash:w:" + bootloaderPath + File.separator +
-                   boardPreferences.get("bootloader.file") + ":i");
-    bootloader.add("-Ulock:w:" + boardPreferences.get("bootloader.lock_bits") + ":m");
+    if (boardPreferences.get("bootloader.lock_bits") != null)
+      bootloader.add("-Ulock:w:" + boardPreferences.get("bootloader.lock_bits") + ":m");
 
-    return avrdude(params, bootloader);
+    if (bootloader.size() > 0)
+      return avrdude(params, bootloader);
+    
+    return true;
   }
   
   public boolean avrdude(Collection p1, Collection p2) throws RunnerException {
@@ -175,14 +184,17 @@ public class AvrdudeUploader extends Uploader  {
   
   public boolean avrdude(Collection params) throws RunnerException {
     List commandDownloader = new ArrayList();
-    commandDownloader.add("avrdude");
-
-    // Point avrdude at its config file since it's in a non-standard location.
-    if (Base.isLinux()) {
-      // ???: is it better to have Linux users install avrdude themselves, in
-      // a way that it can find its own configuration file?
-      commandDownloader.add("-C" + Base.getHardwarePath() + "/tools/avrdude.conf");
-    } else {
+      
+    if(Base.isLinux()) {
+      if ((new File(Base.getHardwarePath() + "/tools/" + "avrdude")).exists()) {
+        commandDownloader.add(Base.getHardwarePath() + "/tools/" + "avrdude");
+        commandDownloader.add("-C" + Base.getHardwarePath() + "/tools/avrdude.conf");
+      } else {
+        commandDownloader.add("avrdude");
+      }
+    }
+    else {
+      commandDownloader.add(Base.getHardwarePath() + "/tools/avr/bin/" + "avrdude");
       commandDownloader.add("-C" + Base.getHardwarePath() + "/tools/avr/etc/avrdude.conf");
     }
 

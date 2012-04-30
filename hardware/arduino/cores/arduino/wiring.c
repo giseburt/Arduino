@@ -41,7 +41,11 @@ volatile unsigned long timer0_overflow_count = 0;
 volatile unsigned long timer0_millis = 0;
 static unsigned char timer0_fract = 0;
 
+#if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+SIGNAL(TIM0_OVF_vect)
+#else
 SIGNAL(TIMER0_OVF_vect)
+#endif
 {
 	// copy these to local variables so they can be stored in registers
 	// (volatile variables must be read from memory on every access)
@@ -120,8 +124,26 @@ void delayMicroseconds(unsigned int us)
 	// calling avrlib's delay_us() function with low values (e.g. 1 or
 	// 2 microseconds) gives delays longer than desired.
 	//delay_us(us);
+#if F_CPU >= 20000000L
+	// for the 20 MHz clock on rare Arduino boards
 
-#if F_CPU >= 16000000L
+	// for a one-microsecond delay, simply wait 2 cycle and return. The overhead
+	// of the function call yields a delay of exactly a one microsecond.
+	__asm__ __volatile__ (
+		"nop" "\n\t"
+		"nop"); //just waiting 2 cycle
+	if (--us == 0)
+		return;
+
+	// the following loop takes a 1/5 of a microsecond (4 cycles)
+	// per iteration, so execute it five times for each microsecond of
+	// delay requested.
+	us = (us<<2) + us; // x5 us
+
+	// account for the time taken in the preceeding commands.
+	us -= 2;
+
+#elif F_CPU >= 16000000L
 	// for the 16 MHz clock on most Arduino boards
 
 	// for a one-microsecond delay, simply return.  the overhead
@@ -212,15 +234,19 @@ void init()
 	// note, however, that fast pwm mode can achieve a frequency of up
 	// 8 MHz (with a 16 MHz clock) at 50% duty cycle
 
+#if defined(TCCR1B) && defined(CS11) && defined(CS10)
 	TCCR1B = 0;
 
 	// set timer 1 prescale factor to 64
-#if defined(TCCR1B) && defined(CS11) && defined(CS10)
 	sbi(TCCR1B, CS11);
+#if F_CPU >= 8000000L
 	sbi(TCCR1B, CS10);
+#endif
 #elif defined(TCCR1) && defined(CS11) && defined(CS10)
 	sbi(TCCR1, CS11);
+#if F_CPU >= 8000000L
 	sbi(TCCR1, CS10);
+#endif
 #endif
 	// put timer 1 in 8-bit phase correct pwm mode
 #if defined(TCCR1A) && defined(WGM10)

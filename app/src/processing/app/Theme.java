@@ -29,6 +29,7 @@ import java.util.*;
 
 import processing.app.syntax.*;
 import processing.core.*;
+import static processing.app.I18n._;
 
 
 /**
@@ -48,8 +49,8 @@ public class Theme {
     try {
       load(Base.getLibStream("theme/theme.txt"));
     } catch (Exception te) {
-      Base.showError(null, "Could not read color theme settings.\n" +
-                           "You'll need to reinstall Processing.", te);
+      Base.showError(null, _("Could not read color theme settings.\n" +
+                             "You'll need to reinstall Processing."), te);
     }
 
     // check for platform-specific properties in the defaults
@@ -196,7 +197,8 @@ public class Theme {
     s = st.nextToken();
     boolean bold = (s.indexOf("bold") != -1);
     boolean italic = (s.indexOf("italic") != -1);
+    boolean underlined = (s.indexOf("underlined") != -1);
 
-    return new SyntaxStyle(color, italic, bold);
+    return new SyntaxStyle(color, italic, bold, underlined);
   }
 }

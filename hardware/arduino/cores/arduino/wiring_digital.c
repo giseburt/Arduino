@@ -24,6 +24,7 @@
   $Id: wiring.c 248 2007-02-03 15:36:30Z mellis $
 */
 
+#define ARDUINO_MAIN
 #include "wiring_private.h"
 #include "pins_arduino.h"
 
@@ -31,17 +32,25 @@ void pinMode(uint8_t pin, uint8_t mode)
 {
 	uint8_t bit = digitalPinToBitMask(pin);
 	uint8_t port = digitalPinToPort(pin);
-	volatile uint8_t *reg;
+	volatile uint8_t *reg, *out;
 
 	if (port == NOT_A_PIN) return;
 
 	// JWS: can I let the optimizer do this?
 	reg = portModeRegister(port);
+	out = portOutputRegister(port);
 
 	if (mode == INPUT) { 
 		uint8_t oldSREG = SREG;
                 cli();
 		*reg &= ~bit;
+		*out &= ~bit;
+		SREG = oldSREG;
+	} else if (mode == INPUT_PULLUP) {
+		uint8_t oldSREG = SREG;
+                cli();
+		*reg &= ~bit;
+		*out |= bit;
 		SREG = oldSREG;
 	} else {
 		uint8_t oldSREG = SREG;
@@ -136,17 +145,16 @@ void digitalWrite(uint8_t pin, uint8_t val)
 
 	out = portOutputRegister(port);
 
+	uint8_t oldSREG = SREG;
+	cli();
+
 	if (val == LOW) {
-		uint8_t oldSREG = SREG;
-                cli();
 		*out &= ~bit;
-		SREG = oldSREG;
 	} else {
-		uint8_t oldSREG = SREG;
-                cli();
 		*out |= bit;
-		SREG = oldSREG;
 	}
+
+	SREG = oldSREG;
 }
 
 int digitalRead(uint8_t pin)

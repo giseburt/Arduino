@@ -32,6 +32,7 @@ import javax.swing.*;
 import processing.app.debug.Compiler;
 import processing.app.debug.Target;
 import processing.core.*;
+import static processing.app.I18n._;
 
 
 /**
@@ -41,9 +42,9 @@ import processing.core.*;
  * files and images, etc) that comes from that.
  */
 public class Base {
-  public static final int REVISION = 22;
+  public static final int REVISION = 101;
   /** This might be replaced by main() if there's a lib/version.txt file. */
-  static String VERSION_NAME = "0022";
+  static String VERSION_NAME = "0101";
   /** Set true if this a proper release rather than a numbered revision. */
   static public boolean RELEASE = false;
 
@@ -168,6 +169,9 @@ public class Base {
     // run static initialization that grabs all the prefs
     Preferences.init(null);
 
+    // load the I18n module for internationalization
+    I18n.init(Preferences.get("editor.languages.current"));
+
     // setup the theme coloring fun
     Theme.init();
 
@@ -177,8 +181,8 @@ public class Base {
     } catch (Exception e) {
       String mess = e.getMessage();
       if (mess.indexOf("ch.randelshofer.quaqua.QuaquaLookAndFeel") == -1) {
-        System.err.println("Non-fatal error while setting the Look & Feel.");
-        System.err.println("The error message follows, however Arduino should run fine.");
+        System.err.println(_("Non-fatal error while setting the Look & Feel."));
+        System.err.println(_("The error message follows, however Arduino should run fine."));
         System.err.println(mess);
       }
     }
@@ -213,9 +217,9 @@ public class Base {
       }
       platform = (Platform) platformClass.newInstance();
     } catch (Exception e) {
-      Base.showError("Problem Setting the Platform",
-                     "An unknown error occurred while trying to load\n" +
-                     "platform-specific code for your machine.", e);
+      Base.showError(_("Problem Setting the Platform"),
+                     _("An unknown error occurred while trying to load\n" +
+                       "platform-specific code for your machine."), e);
     }
   }
 
@@ -225,10 +229,10 @@ public class Base {
       Class.forName("com.sun.jdi.VirtualMachine");
     } catch (ClassNotFoundException cnfe) {
       Base.showPlatforms();
-      Base.showError("Please install JDK 1.5 or later",
-                     "Arduino requires a full JDK (not just a JRE)\n" +
-                     "to run. Please install JDK 1.5 or later.\n" +
-                     "More information can be found in the reference.", cnfe);
+      Base.showError(_("Please install JDK 1.5 or later"),
+                     _("Arduino requires a full JDK (not just a JRE)\n" +
+                       "to run. Please install JDK 1.5 or later.\n" +
+                       "More information can be found in the reference."), cnfe);
     }
   }
 
@@ -250,12 +254,12 @@ public class Base {
     if (sketchbookPath != null) {
       File skechbookFolder = new File(sketchbookPath);
       if (!skechbookFolder.exists()) {
-        Base.showWarning("Sketchbook folder disappeared",
-                         "The sketchbook folder no longer exists.\n" +
-                         "Arduino will switch to the default sketchbook\n" +
-                         "location, and create a new sketchbook folder if\n" +
-                         "necessary. Arduino will then stop talking about\n" +
-                         "himself in the third person.", null);
+        Base.showWarning(_("Sketchbook folder disappeared"),
+                         _("The sketchbook folder no longer exists.\n" +
+                           "Arduino will switch to the default sketchbook\n" +
+                           "location, and create a new sketchbook folder if\n" +
+                           "necessary. Arduino will then stop talking about\n" +
+                           "himself in the third person."), null);
         sketchbookPath = null;
       }
     }
@@ -525,13 +529,13 @@ public class Base {
       if (index == 26) {
         // In 0159, avoid running past z by sending people outdoors.
         if (!breakTime) {
-          Base.showWarning("Time for a Break",
-                           "You've reached the limit for auto naming of new sketches\n" +
-                           "for the day. How about going for a walk instead?", null);
+          Base.showWarning(_("Time for a Break"),
+                           _("You've reached the limit for auto naming of new sketches\n" +
+                             "for the day. How about going for a walk instead?"), null);
           breakTime = true;
         } else {
-          Base.showWarning("Sunshine",
-                           "No really, time for some fresh air for you.", null);
+          Base.showWarning(_("Sunshine"),
+                           _("No really, time for some fresh air for you."), null);
         }
         return null;
       }
@@ -545,7 +549,7 @@ public class Base {
     newbieDir.mkdirs();
 
     // Make an empty pde file
-    File newbieFile = new File(newbieDir, newbieName + ".pde");
+    File newbieFile = new File(newbieDir, newbieName + ".ino");
     new FileOutputStream(newbieFile);  // create the file
     return newbieFile.getAbsolutePath();
   }
@@ -626,7 +630,7 @@ public class Base {
   public void handleOpenPrompt() {
     // get the frontmost window frame for placing file dialog
     FileDialog fd = new FileDialog(activeEditor,
-                                   "Open an Arduino sketch...",
+                                   _("Open an Arduino sketch..."),
                                    FileDialog.LOAD);
     // This was annoying people, so disabled it in 0125.
     //fd.setDirectory(Preferences.get("sketchbook.path"));
@@ -637,7 +641,8 @@ public class Base {
         public boolean accept(File dir, String name) {
           // TODO this doesn't seem to ever be used. AWESOME.
           //System.out.println("check filter on " + dir + " " + name);
-          return name.toLowerCase().endsWith(".pde");
+          return name.toLowerCase().endsWith(".ino")
+              || name.toLowerCase().endsWith(".pde");
         }
       });
 
@@ -764,17 +769,17 @@ public class Base {
       if (Base.isMacOS()) {
         Object[] options = { "OK", "Cancel" };
         String prompt =
-          "<html> " +
-          "<head> <style type=\"text/css\">"+
-          "b { font: 13pt \"Lucida Grande\" }"+
-          "p { font: 11pt \"Lucida Grande\"; margin-top: 8px }"+
-          "</style> </head>" +
-          "<b>Are you sure you want to Quit?</b>" +
-          "<p>Closing the last open sketch will quit Arduino.";
+          _("<html> " +
+            "<head> <style type=\"text/css\">"+
+            "b { font: 13pt \"Lucida Grande\" }"+
+            "p { font: 11pt \"Lucida Grande\"; margin-top: 8px }"+
+            "</style> </head>" +
+            "<b>Are you sure you want to Quit?</b>" +
+            "<p>Closing the last open sketch will quit Arduino.");
 
         int result = JOptionPane.showOptionDialog(editor,
                                                   prompt,
-                                                  "Quit",
+                                                  _("Quit"),
                                                   JOptionPane.YES_NO_OPTION,
                                                   JOptionPane.QUESTION_MESSAGE,
                                                   null,
@@ -895,7 +900,7 @@ public class Base {
 
     //System.out.println("rebuilding toolbar menu");
     // Add the single "Open" item
-    item = Editor.newJMenuItem("Open...", 'O');
+    item = Editor.newJMenuItem(_("Open..."), 'O');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
           handleOpenPrompt();
@@ -962,7 +967,7 @@ public class Base {
       File sketchbookLibraries = getSketchbookLibrariesFolder();
       boolean found = addLibraries(importMenu, sketchbookLibraries);
       if (found) {
-        JMenuItem contrib = new JMenuItem("Contributed");
+        JMenuItem contrib = new JMenuItem(_("Contributed"));
         contrib.setEnabled(false);
         importMenu.insert(contrib, separatorIndex);
         importMenu.insertSeparator(separatorIndex);
@@ -988,6 +993,13 @@ public class Base {
   }
   
   
+  public void onBoardOrPortChange() {
+    for (Editor editor : editors) {
+      editor.onBoardOrPortChange();
+    }  
+  }
+
+  
   public void rebuildBoardsMenu(JMenu menu) {
     //System.out.println("rebuilding boards menu");
     menu.removeAll();      
@@ -1000,6 +1012,8 @@ public class Base {
               //System.out.println("Switching to " + target + ":" + board);
               Preferences.set("target", (String) getValue("target"));
               Preferences.set("board", (String) getValue("board"));
+              onBoardOrPortChange();
+              Sketch.buildSettingChanged();
             }
           };
         action.putValue("target", target.getName());
@@ -1016,22 +1030,28 @@ public class Base {
   }
   
   
-  public void rebuildBurnBootloaderMenu(JMenu menu) {
-    //System.out.println("rebuilding burn bootloader menu");
+  public void rebuildProgrammerMenu(JMenu menu) {
+    //System.out.println("rebuilding programmer menu");
     menu.removeAll();      
+    ButtonGroup group = new ButtonGroup();
     for (Target target : targetsTable.values()) {
       for (String programmer : target.getProgrammers().keySet()) {
         AbstractAction action = 
           new AbstractAction(
-            "w/ " + target.getProgrammers().get(programmer).get("name")) {
+            target.getProgrammers().get(programmer).get("name")) {
             public void actionPerformed(ActionEvent actionevent) {
-              activeEditor.handleBurnBootloader((String) getValue("target"),
-                                                (String) getValue("programmer"));
+              Preferences.set("programmer", getValue("target") + ":" +
+                                            getValue("programmer"));
             }
           };
         action.putValue("target", target.getName());
         action.putValue("programmer", programmer);
-        JMenuItem item = new JMenuItem(action);
+        JMenuItem item = new JRadioButtonMenuItem(action);
+        if (Preferences.get("programmer").equals(target.getName() + ":" +
+                                                 programmer)) {
+          item.setSelected(true);
+        }
+        group.add(item);
         menu.add(item);
       }
     }
@@ -1072,10 +1092,10 @@ public class Base {
               handleOpen(path);
             }
           } else {
-            showWarning("Sketch Does Not Exist",
-                        "The selected sketch no longer exists.\n" +
-                        "You may need to restart Arduino to update\n" +
-                        "the sketchbook menu.", null);
+            showWarning(_("Sketch Does Not Exist"),
+                        _("The selected sketch no longer exists.\n" +
+                          "You may need to restart Arduino to update\n" +
+                          "the sketchbook menu."), null);
           }
         }
       };
@@ -1091,21 +1111,25 @@ public class Base {
       File subfolder = new File(folder, list[i]);
       if (!subfolder.isDirectory()) continue;
 
-      File entry = new File(subfolder, list[i] + ".pde");
+      File entry = new File(subfolder, list[i] + ".ino");
+      if (!entry.exists() && (new File(subfolder, list[i] + ".pde")).exists()) {
+      	entry = new File(subfolder, list[i] + ".pde");
+      }
       // if a .pde file of the same prefix as the folder exists..
       if (entry.exists()) {
         //String sanityCheck = sanitizedName(list[i]);
         //if (!sanityCheck.equals(list[i])) {
         if (!Sketch.isSanitaryName(list[i])) {
           if (!builtOnce) {
-            String complaining =
-              "The sketch \"" + list[i] + "\" cannot be used.\n" +
-              "Sketch names must contain only basic letters and numbers\n" +
-              "(ASCII-only with no spaces, " +
-              "and it cannot start with a number).\n" +
-              "To get rid of this message, remove the sketch from\n" +
-              entry.getAbsolutePath();
-            Base.showMessage("Ignoring sketch with bad name", complaining);
+            String complaining = I18n.format(
+              _("The sketch \"{0}\" cannot be used.\n" +
+                "Sketch names must contain only basic letters and numbers\n" +
+                "(ASCII-only with no spaces, " +
+                "and it cannot start with a number).\n" +
+                "To get rid of this message, remove the sketch from\n" +
+	        "{1}"), list[i], entry.getAbsolutePath()
+	    );
+            Base.showMessage(_("Ignoring sketch with bad name"), complaining);
           }
           continue;
         }
@@ -1174,11 +1198,13 @@ public class Base {
 //      if (libraryJar.exists()) {
         String sanityCheck = Sketch.sanitizeName(potentialName);
         if (!sanityCheck.equals(potentialName)) {
-          String mess =
-            "The library \"" + potentialName + "\" cannot be used.\n" +
-            "Library names must contain only basic letters and numbers.\n" +
-            "(ASCII only and no spaces, and it cannot start with a number)";
-          Base.showMessage("Ignoring bad library name", mess);
+          String mess = I18n.format(
+            _("The library \"{0}\" cannot be used.\n" +
+              "Library names must contain only basic letters and numbers.\n" +
+              "(ASCII only and no spaces, and it cannot start with a number)"),
+	    potentialName
+	  );
+          Base.showMessage(_("Ignoring bad library name"), mess);
           continue;
         }
 
@@ -1403,17 +1429,17 @@ public class Base {
       try {
         settingsFolder = platform.getSettingsFolder();
       } catch (Exception e) {
-        showError("Problem getting data folder",
-                  "Error getting the Arduino data folder.", e);
+        showError(_("Problem getting data folder"),
+                  _("Error getting the Arduino data folder."), e);
       }
     }
 
     // create the folder if it doesn't exist already
     if (!settingsFolder.exists()) {
       if (!settingsFolder.mkdirs()) {
-        showError("Settings issues",
-                  "Arduino cannot run because it could not\n" +
-                  "create a folder to store your settings.", null);
+        showError(_("Settings issues"),
+                  _("Arduino cannot run because it could not\n" +
+                    "create a folder to store your settings."), null);
       }
     }
     return settingsFolder;
@@ -1511,12 +1537,12 @@ public class Base {
   
   
   static public String getAvrBasePath() {
-    if(Base.isLinux()) {
-      return ""; // avr tools are installed system-wide and in the path
-    } else {
-      return getHardwarePath() + File.separator + "tools" +
-             File.separator + "avr" + File.separator + "bin" + File.separator;
-    }  
+    String path = getHardwarePath() + File.separator + "tools" +
+                  File.separator + "avr" + File.separator + "bin" + File.separator;
+    if (Base.isLinux() && !(new File(path)).exists()) {
+      return "";  // use distribution provided avr tools if bundled tools missing
+    }
+    return path;
   }
   
   
@@ -1573,9 +1599,9 @@ public class Base {
     }
 
     if (!result) {
-      showError("You forgot your sketchbook",
-                "Arduino cannot run because it could not\n" +
-                "create a folder to store your sketchbook.", null);
+      showError(_("You forgot your sketchbook"),
+                _("Arduino cannot run because it could not\n" +
+                  "create a folder to store your sketchbook."), null);
     }
 
     return sketchbookFolder;
@@ -1594,7 +1620,7 @@ public class Base {
       return folder;
     }
 
-    String prompt = "Select (or create new) folder for sketches...";
+    String prompt = _("Select (or create new) folder for sketches...");
     folder = Base.selectFolder(prompt, null, null);
     if (folder == null) {
       System.exit(0);
@@ -1618,8 +1644,8 @@ public class Base {
       platform.openURL(url);
 
     } catch (Exception e) {
-      showWarning("Problem Opening URL",
-                  "Could not open the URL\n" + url, e);
+      showWarning(_("Problem Opening URL"),
+                  I18n.format(_("Could not open the URL\n{0}"), url), e);
     }
   }
 
@@ -1642,8 +1668,8 @@ public class Base {
       platform.openFolder(file);
 
     } catch (Exception e) {
-      showWarning("Problem Opening Folder",
-                  "Could not open the folder\n" + file.getAbsolutePath(), e);
+      showWarning(_("Problem Opening Folder"),
+                  I18n.format(_("Could not open the folder\n{0}"), file.getAbsolutePath()), e);
     }
   }
 
@@ -1700,6 +1726,10 @@ public class Base {
    * Give this Frame a Processing icon.
    */
   static public void setIcon(Frame frame) {
+    // don't use the low-res icon on Mac OS X; the window should
+    // already have the right icon from the .app file.
+    if (Base.isMacOS()) return;
+    
     Image image = Toolkit.getDefaultToolkit().createImage(PApplet.ICON_IMAGE);
     frame.setIconImage(image);
   }
@@ -1752,36 +1782,36 @@ public class Base {
 
   static public void showGettingStarted() {
     if (Base.isMacOS()) {
-      Base.showReference("Guide_MacOSX.html");
+      Base.showReference(_("Guide_MacOSX.html"));
     } else if (Base.isWindows()) {
-      Base.showReference("Guide_Windows.html");
+      Base.showReference(_("Guide_Windows.html"));
     } else {
-      Base.openURL("http://www.arduino.cc/playground/Learning/Linux");
+      Base.openURL(_("http://www.arduino.cc/playground/Learning/Linux"));
     }
   }
 
   static public void showReference() {
-    showReference("index.html");
+    showReference(_("index.html"));
   }
 
 
   static public void showEnvironment() {
-    showReference("Guide_Environment.html");
+    showReference(_("Guide_Environment.html"));
   }
 
 
   static public void showPlatforms() {
-    showReference("environment" + File.separator + "platforms.html");
+    showReference(_("environment") + File.separator + _("platforms.html"));
   }
 
 
   static public void showTroubleshooting() {
-    showReference("Guide_Troubleshooting.html");
+    showReference(_("Guide_Troubleshooting.html"));
   }
 
 
   static public void showFAQ() {
-    showReference("FAQ.html");
+    showReference(_("FAQ.html"));
   }
   
 
@@ -1793,7 +1823,7 @@ public class Base {
    * much of a bummer, but something to notify the user about.
    */
   static public void showMessage(String title, String message) {
-    if (title == null) title = "Message";
+    if (title == null) title = _("Message");
 
     if (commandLine) {
       System.out.println(title + ": " + message);
@@ -1809,7 +1839,7 @@ public class Base {
    * Non-fatal error message with optional stack trace side dish.
    */
   static public void showWarning(String title, String message, Exception e) {
-    if (title == null) title = "Warning";
+    if (title == null) title = _("Warning");
 
     if (commandLine) {
       System.out.println(title + ": " + message);
@@ -1828,7 +1858,7 @@ public class Base {
    * for errors that allow P5 to continue running.
    */
   static public void showError(String title, String message, Throwable e) {
-    if (title == null) title = "Error";
+    if (title == null) title = _("Error");
 
     if (commandLine) {
       System.err.println(title + ": " + message);
@@ -2161,14 +2191,22 @@ public class Base {
     if (file.exists()) {
       boolean result = file.delete();
       if (!result) {
-        throw new IOException("Could not remove old version of " +
-                              file.getAbsolutePath());
+        throw new IOException(
+	  I18n.format(
+	    _("Could not remove old version of {0}"),
+	    file.getAbsolutePath()
+	  )
+	);
     }
   }
     boolean result = temp.renameTo(file);
     if (!result) {
-      throw new IOException("Could not replace " +
-                            file.getAbsolutePath());
+      throw new IOException(
+	I18n.format(
+	  _("Could not replace {0}"),
+	  file.getAbsolutePath()
+	)
+      );
     }
   }
 
@@ -2206,7 +2244,7 @@ public class Base {
     if (dir.exists()) {
       removeDescendants(dir);
       if (!dir.delete()) {
-        System.err.println("Could not delete " + dir);
+        System.err.println(I18n.format(_("Could not delete {0}"), dir));
       }
     }
   }
@@ -2229,7 +2267,7 @@ public class Base {
         if (!Preferences.getBoolean("compiler.save_build_files")) {
           if (!dead.delete()) {
             // temporarily disabled
-            System.err.println("Could not delete " + dead);
+	    System.err.println(I18n.format(_("Could not delete {0}"), dead));
           }
         }
       } else {
