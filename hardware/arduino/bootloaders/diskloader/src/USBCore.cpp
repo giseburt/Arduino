@@ -30,9 +30,11 @@
 #define EP_TYPE_ISOCHRONOUS_OUT		0x40
 
 /** Pulse generation counters to keep track of the number of milliseconds remaining for each pulse type */
+#ifdef TXLED0
 #define TX_RX_LED_PULSE_MS 100
 u8 TxLEDPulse; /**< Milliseconds remaining for data Tx LED pulse */
 u8 RxLEDPulse; /**< Milliseconds remaining for data Rx LED pulse */
+#endif
 
 void Reboot();
 
@@ -89,31 +91,39 @@ static inline void ClearOUT(void)
 static
 void Send(volatile const u8* data, u8 count)
 {
+#ifdef TXLED0
 	TXLED1;					// light the TX LED
 	TxLEDPulse = TX_RX_LED_PULSE_MS;
+#endif
 	while (count--)
 		UEDATX = *data++;
 }
 
 void Recv(volatile u8* data, u8 count)
 {
+#ifdef TXLED0
 	RXLED1;					// light the RX LED
 	RxLEDPulse = TX_RX_LED_PULSE_MS;
+#endif
 	while (count--)
 		*data++ = UEDATX;
 }
 
 static inline u8 Recv8()
 {
+#ifdef TXLED0
 	RXLED1;					// light the RX LED
 	RxLEDPulse = TX_RX_LED_PULSE_MS;
+#endif
 	return UEDATX;
 }
 
 static inline void Send8(u8 d)
 {
+#ifdef TXLED0
 	TXLED1;					// light the TX LED
 	TxLEDPulse = TX_RX_LED_PULSE_MS;
+#endif
 	UEDATX = d;
 }
 
@@ -471,12 +481,14 @@ void USBGeneralInterrupt()
 	//	Start of Frame - happens every millisecond so we use it for TX and RX LED one-shot timing, too
 	if (udint & (1<<SOFI))
 	{
+#ifdef TXLED0
 		// check whether the one-shot period has elapsed.  if so, turn off the LED
 		if (TxLEDPulse && !(--TxLEDPulse))
 			TXLED0;
 		if (RxLEDPulse && !(--RxLEDPulse))
 			RXLED0;
-		
+#endif
+
 		if (!_ejected)
 			_timeout = 0;
 	}

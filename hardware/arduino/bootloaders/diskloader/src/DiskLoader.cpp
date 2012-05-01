@@ -112,8 +112,10 @@ int main(void) __attribute__ ((naked));
 int main()
 {
 	wdt_disable();
+#ifdef TXLED0
 	TXLED0;
 	RXLED0;
+#endif
 	LED0;
 	BOARD_INIT();
 	USBInit();
@@ -227,8 +229,10 @@ void LEDPulse()
 
 void Reboot()
 {
+#ifdef TXLED0
 	TXLED0;		// switch off the RX and TX LEDs before starting the user sketch
 	RXLED0;
+#endif
 	UDCON = 1;		// Detatch USB
 	UDIEN = 0;
 	asm volatile (	// Reset vector to run firmware
